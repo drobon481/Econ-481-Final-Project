@@ -30,8 +30,13 @@ Federal Reserve Bank of St. Louis -
 
 import requests
 import pandas as pd
+import numpy as np
 import datetime as dt
 import statsmodels.api as sm
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 def read_sheet(sheet) -> pd.DataFrame:
     """
@@ -130,6 +135,62 @@ def process_minimumwage() -> pd.DataFrame:
     filtered_df.to_csv('mergedMinimumWageData.csv', index=False)
 
     return filtered_df
+
+
+def OLS_1() -> object:
+    """
+    Regressing Overall.12 (overall % change in wage growth, monthly, for the whole dataset) 
+    over 3MonthInterestRate, MoM Change, FedMinWage, and GDP_AnnualGrowth
+    Reads in our final dataset and cleans/our data in order to run OLS.
+    Utilizes statsmodel OLS function which runs OLS and outputs model summary
+    """
+    data = pd.read_csv('finalData.csv')
+
+    # Convert the '3MonthInterestRate' column to string type
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].astype(str)
+
+    # Remove decimal points only when there is no number before or after it
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].str.replace(r'(?<!\d)\.|\.(?!\d)', '', regex=True)
+
+    # Replace blanks with '0'
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].replace('', '0')
+
+    # Convert the column to float
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].astype(float)
+
+    # Correctly remove dollar signs from 'FedMinWage' and convert to float
+    data['FedMinWage'] = data['FedMinWage'].str.replace('$', '').astype(float)
+
+    # Correctly remove percent signs from 'GDP_AnnualGrowth', convert to float, and adjust for percentage representation
+    data['GDP_AnnualGrowth'] = data['GDP_AnnualGrowth'].str.replace('%', '').astype(float) / 100
+
+    # Display the corrected data types to ensure the operations were successful
+    print(data[['FedMinWage', 'GDP_AnnualGrowth', '3MonthInterestRate']].dtypes)
+    
+    # Filter Y variables
+    Y = data['Overall.12']
+    Y_filtered = Y[(data['Date'] >= '1998-01-01') & (data['Date'] <= '2020-12-01')]
+
+    # Filter X variables
+    X = data[['3MonthInterestRate', 'FedMinWage', 'GDP_AnnualGrowth']]
+    X_filtered = X[(data['Date'] >= '1998-01-01') & (data['Date'] <= '2020-12-01')]
+    X = sm.add_constant(X)
+    # Reset indices to align
+    Y_filtered = Y_filtered.reset_index(drop=True)
+    X_filtered = X_filtered.reset_index(drop=True)
+
+    # Add constant to X
+    X_filtered = sm.add_constant(X_filtered)
+
+    # Create the OLS model
+    est = sm.OLS(Y_filtered, X_filtered.astype(float)).fit()
+    sum_OLS_1 = est.summary()
+    
+
+    return sum_OLS_1
+
+print(OLS_1())
+
 
 def main():
     """
