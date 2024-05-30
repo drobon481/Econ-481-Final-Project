@@ -30,8 +30,12 @@ Federal Reserve Bank of St. Louis -
 
 import requests
 import pandas as pd
+import numpy as np
 import datetime as dt
 import statsmodels.api as sm
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 def read_sheet(sheet) -> pd.DataFrame:
     """
@@ -277,32 +281,85 @@ def OLS_1() -> object:
     # Correctly remove percent signs from 'GDP_AnnualGrowth', convert to float, and adjust for percentage representation
     data['GDP_AnnualGrowth'] = data['GDP_AnnualGrowth'].str.replace('%', '').astype(float) / 100
 
-    # Display the corrected data types to ensure the operations were successful
-    print(data[['FedMinWage', 'GDP_AnnualGrowth', '3MonthInterestRate']].dtypes)
-    
-    # Filter Y variables
-    Y = data['Overall.12']
-    Y_filtered = Y[(data['Date'] >= '1998-01-01') & (data['Date'] <= '2020-12-01')]
 
-    # Filter X variables
-    X = data[['3MonthInterestRate', 'FedMinWage', 'GDP_AnnualGrowth']]
-    X_filtered = X[(data['Date'] >= '1998-01-01') & (data['Date'] <= '2020-12-01')]
-    X = sm.add_constant(X)
-    # Reset indices to align
-    Y_filtered = Y_filtered.reset_index(drop=True)
-    X_filtered = X_filtered.reset_index(drop=True)
+    def map_party(party):
+        if party == 'Democrat':
+            return 0
+        elif party == 'Republican':
+            return 1
+        else:
+            return np.nan
 
-    # Add constant to X
+    # Apply the mapping function to the party columns
+    data['PresParty'] = data['PresParty'].apply(map_party)
+    data['SenParty'] = data['SenParty'].apply(map_party)
+    data['HouseParty'] = data['HouseParty'].apply(map_party)
+
+    # Drop rows with NA values
+    data = data.dropna(subset=['PresParty', 'SenParty', 'HouseParty','Overall.12','3MonthInterestRate', 'MoM Change', 'Employment_Rate', 'FedMinWage', 'GDP_AnnualGrowth'])
+
+    # Separate the dependent variable (Y) and independent variables (X)
+    Y_filtered = data['Overall.12']
+    X_filtered = data[['PresParty', 'SenParty', 'HouseParty', '3MonthInterestRate', 'MoM Change', 'FedMinWage', 'GDP_AnnualGrowth']]
+
+    # Add a constant term to the predictors
     X_filtered = sm.add_constant(X_filtered)
 
-    # Create the OLS model
-    est = sm.OLS(Y_filtered, X_filtered.astype(float)).fit()
-    sum_OLS_1 = est.summary()
+    # Fit the OLS regression model
+    ols_model = sm.OLS(Y_filtered, X_filtered).fit()
+
+    # Print the summary of the regression results
+    sum_OLS = ols_model.summary()
     
 
-    return sum_OLS_1
+    return sum_OLS
 
-print(OLS_1())
+# print(OLS_1())
+
+def OLS_2() -> object:
+
+    """
+    Regressed additional variables like Male, Female, Bachelors degree or higher on 
+    Overall.12.
+    Reads in our final dataset and cleans/our data in order to run OLS.
+    Utilizes statsmodel OLS function which runs OLS and outputs model summary
+    """
+    data = pd.read_csv('finalData.csv')
+
+    # Convert the '3MonthInterestRate' column to string type
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].astype(str)
+
+    # Remove decimal points only when there is no number before or after it
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].str.replace(r'(?<!\d)\.|\.(?!\d)', '', regex=True)
+
+    # Replace blanks with '0'
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].replace('', '0')
+
+    # Convert the column to float
+    data['3MonthInterestRate'] = data['3MonthInterestRate'].astype(float)
+
+    # Correctly remove dollar signs from 'FedMinWage' and convert to float
+    data['FedMinWage'] = data['FedMinWage'].str.replace('$', '').astype(float)
+
+    # Correctly remove percent signs from 'GDP_AnnualGrowth', convert to float, and adjust for percentage representation
+    data['GDP_AnnualGrowth'] = data['GDP_AnnualGrowth'].str.replace('%', '').astype(float) / 100
+
+    Y = data['Overall.12'].dropna()
+    Y = Y[(data['Date'] >= '1998-01-01') & (data['Date'] <= '2020-12-01')]
+    # Define the independent variables, add a constant term to the predictors
+    X = data[['3MonthInterestRate', 'MoM Change', 'FedMinWage', 'GDP_AnnualGrowth', 'Job Stayer', 
+              'Job Switcher', 'Male', 'Female', 'Bachelors degree or higher']]
+    X = X.dropna(subset=['3MonthInterestRate', 'MoM Change',  'FedMinWage', 'GDP_AnnualGrowth', 
+                         'Job Stayer', 'Job Switcher', 'Male', 'Female', 'Bachelors degree or higher'])
+    X = sm.add_constant(X)
+
+    # Create the OLS model
+    est = sm.OLS(Y, X.astype(float)).fit()
+
+    sum_OLS_2 = est.summary()
+    return sum_OLS_2
+
+print(OLS_2())
 
 def main():
     """
@@ -315,6 +372,8 @@ def main():
     process_interest_rate()
     process_cpi()
     finalData = create_final_dataframe()
+    OLS_1()
+    OLS_2()
 
 if __name__ == '__main__':
     main()
