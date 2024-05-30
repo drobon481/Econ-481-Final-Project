@@ -497,6 +497,158 @@ def vif_matrix() -> object:
 
     return vif_1, vif_2, vif_3
 
+def plot_changes_by_groups(data: pd.DataFrame,
+                           context: str='notebook') -> tuple:
+    """
+    Takes a DataFrame containing data on monthly wage changes from 1998 to 2024 
+    and plots line graphs comparing different divisions of the population. 
+    Optionally takes a string specifying the "context" seaborn plot option to 
+    use. Returns a tuple containing the figure objects for each graph.
+    
+    The graphs explore differences in monthly wage changes comparing these 
+    groups:
+        a.) Male vs. female workers
+        b.) Each income quartile
+        c.) Usually Full-time vs. Usually Part-time workers
+    """
+    # Formatting data to what I need
+    df1 = data.rename(columns={
+                        'Lowest quartile of wage distribution': '1st Quartile',
+                        '2nd quartile of wage distribution': '2nd Quartile',
+                        '3rd quartile of wage distribution': '3rd Quartile',
+                        'Highest quartile of wage distribution': '4th Quartile'
+                     })
+    df1['Date'] = pd.to_datetime(df1['Date'])
+    df1 = df1.set_index('Date')
+
+    # Seaborn style options
+    sns.set_style('darkgrid')
+    sns.set_context(context)
+
+    # Visualization A - Difference in wage changes between males and females
+    fig_a, ax_a = plt.subplots()
+    df_a = df1[['Male', 'Female']]
+    viz_a = sns.lineplot(data=df_a, dashes=False, ax=ax_a)
+    viz_a.set_xlabel('Month')
+    viz_a.set_ylabel('Monthly % Change in Wage')
+    viz_a.set(title='Monthly Percent Change in Wage, 1998 to 2024'\
+                '\nMale vs. Female')
+    fig_a.savefig('eda_viz_1a.png')
+
+    # Visualization B - Difference between income quartiles
+    fig_b, ax_b = plt.subplots()
+    df_b = df1[['1st Quartile', '2nd Quartile', '3rd Quartile',
+                  '4th Quartile']]
+    viz_b = sns.lineplot(data=df_b, dashes=False, ax=ax_b)
+    viz_b.set_xlabel('Month')
+    viz_b.set_ylabel('Monthly % Change in Wage')
+    viz_b.set(title='Monthly Percent Change in Wage, 1998 to 2024'\
+                '\nBy Income Quartile')
+    fig_b.savefig('eda_viz_1b.png')
+
+    # Visualization C - Difference between full-time and part-time
+    fig_c, ax_c = plt.subplots()
+    df_c = df1[['Usually Full-time', 'Usually Part-time']]
+    viz_c = sns.lineplot(data=df_c, dashes=False, ax=ax_c)
+    viz_c.set_xlabel('Month')
+    viz_c.set_ylabel('Monthly % Change in Wage')
+    viz_c.set(title='Monthly Percent Change in Wage, 1998 to 2024'\
+                '\nEmployment Type')
+    fig_c.savefig('eda_viz_1c.png')
+
+    return fig_a, fig_b, fig_c
+
+def plot_interest_employment_rates(data: pd.DataFrame,
+                                   context: str='notebook') -> plt.Axes:
+    """
+    Takes a DataFrame containing data on monthly wage changes from 1998 to 2024 
+    and plots a line graph comparing the 3-month interest rate and the 
+    employment rate. Optionally takes a string specifying the "context" seaborn 
+    plot option to use. Returns the matplotlib.axes Axes object for the graph.
+    """
+    df2 = data
+    # Formatting data to what I need
+    df2['Date'] = pd.to_datetime(df2['Date'])
+    df2['3 Month Interest Rate'] = pd.to_numeric(df2['3MonthInterestRate'],
+                                                  errors='coerce')
+    has_interest_rate = df2['Date'] > dt.datetime(1997, 12, 31)
+    df2 = df2[has_interest_rate]
+    df2 = df2.set_index('Date')
+
+    # Seaborn style options
+    sns.set_style('darkgrid')
+    sns.set_context(context)
+
+    # Visualization
+    fig, ax = plt.subplots()
+    fig = sns.lineplot(data=df2['3 Month Interest Rate'], dashes=False,
+                       color='tab:blue')
+    ax.set_ylabel('3-Month Interest Rate (%)')
+    ax.set_xlabel('Month')
+
+    ax_2 = plt.twinx()
+    fig = sns.lineplot(data=df2['Employment_Rate'], dashes=False, 
+                       color='tab:orange', ax=ax_2, label='Employment Rate')
+    ax_2.set_ylabel('Employment Rate (%)')
+    ax_2.set(title='3-Month Interest Rate Compared to Employment Rate, '\
+                '1998 to 2024')
+    fig.savefig('eda_viz_2.png')
+    
+    # To show both labels in legend (but issue with overlap):
+    # - Add label parameter to 3 month interest rate viz
+    # - tricky workaround:
+    # plots = [viz1, viz2]
+    # labels = [viz1.get_label(), viz2.get_label()]
+    # fig.legend(plots, labels)
+
+    return fig
+
+def plot_changes_gdp_min_wage(data: pd.DataFrame,
+                              context: str='notebook') -> plt.Axes:
+    """ 
+    Takes a DataFrame containing data on annual percent change in GDP and the 
+    federal minimum wage on from 1977 to 2020. Plots a line graph comparing the 
+    annual percent change in GDP to the annual percent change in the federal 
+    minimum wage. Optionally takes a string specifying the "context" seaborn 
+    plot option to use. Returns the matplotlib.axes Axes object for the graph.
+    """
+    # Formatting data to what I need
+    df3 = data[['Year', 'Date', 'FedMinWage', 'GDP_AnnualGrowth']]
+    df3['Date'] = pd.to_datetime(df3['Date'])
+    df3['Year'] = df3['Year'].astype(int, errors='ignore')
+    df3['FedMinWage'] = df3['FedMinWage'].str.lstrip('$')
+    df3['GDP_AnnualGrowth'] = df3['GDP_AnnualGrowth'].str.rstrip('%')
+    df3['FedMinWage'] = pd.to_numeric(df3['FedMinWage'], errors='coerce')
+    df3['GDP_AnnualGrowth'] = pd.to_numeric(df3['GDP_AnnualGrowth'],
+                                            errors='coerce')
+
+    has_gdp = df3['Date'] < dt.datetime(2021, 1, 1)
+    df3 = df3[has_gdp]
+    df3 = df3.groupby('Year', as_index=True).first()
+    df3['FedMinWage_lag'] = df3['FedMinWage'].shift(1)
+    df3['delta_minWage'] = ((df3['FedMinWage'] - df3['FedMinWage_lag']) \
+                            / df3['FedMinWage_lag']) * 100
+    df3.rename(columns={'delta_minWage': 'Change in Minimum Wage',
+                        'GDP_AnnualGrowth': 'Change in GDP'},
+               inplace=True)
+
+    # Seaborn style options
+    sns.set_style('darkgrid')  
+    sns.set_context(context)
+
+    # Vizualization
+    fig3, ax3 = plt.subplots()
+    df3 = df3[['Change in Minimum Wage', 'Change in GDP']]
+    fig3 = sns.lineplot(data=df3.iloc[1:], dashes=False, ax=ax3)
+    ax3.set_xlabel('Year')
+    ax3.set_ylabel('Annual Percent Change')
+    ax3.set(title='Annual Percent Change in GDP vs. Federal Minimum Wage, '\
+                '1978-2020')
+    sns.move_legend(ax3, 'upper right')
+    fig3.savefig('eda_viz_3.png')
+    
+    return fig3
+
 def main():
     """
     Calls our functions to wrangle and save data, create graphs, and run 
@@ -512,6 +664,9 @@ def main():
     OLS_2()
     corr_matrices_and_visuals()
     vif_matrix()
+    #plot_changes_by_groups(finalData)
+    plot_interest_employment_rates(finalData)
+    plot_changes_gdp_min_wage(finalData)
 
 if __name__ == '__main__':
     main()
