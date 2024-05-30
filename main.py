@@ -314,8 +314,6 @@ def OLS_1() -> object:
 
     return sum_OLS
 
-# print(OLS_1())
-
 def OLS_2() -> object:
 
     """
@@ -359,7 +357,99 @@ def OLS_2() -> object:
     sum_OLS_2 = est.summary()
     return sum_OLS_2
 
-print(OLS_2())
+def corr_matrix() -> object:
+    """
+    Chooses variables from final dataset and drops nas for use in correlation matrices.
+    Utilizes .corr() function from pandas library 
+    """
+
+    # read in the dataset
+    data = pd.read_csv('finalData.csv')
+
+    # modifies data columns to be used as part of correlation matrix
+    data['3MonthInterestRate'] = pd.to_numeric(data['3MonthInterestRate'], errors='coerce')
+    data['FedMinWage'] = data['FedMinWage'].str.replace('$', '').astype(float)
+    data['GDP_AnnualGrowth'] = data['GDP_AnnualGrowth'].str.replace('%', '').astype(float) / 100
+
+    # choose the following variables for correlation matrix using dataframe X
+    X = data[['3MonthInterestRate', 'MoM Change', 'Employment_Rate', 'FedMinWage', 'GDP_AnnualGrowth']]
+    X = X.dropna()
+
+    # choose the following variables for dataframe X_2
+    X_2 = data[['FedMinWage', 'MoM Change', '3MonthInterestRate', 'GDP_AnnualGrowth']]
+    X_2 = X_2.dropna()
+
+    # choose the following variables for dataframe X_3
+    X_3 = data[['3MonthInterestRate', 'MoM Change', 'Employment_Rate', 'FedMinWage',
+                       'GDP_AnnualGrowth', 'Lowest quartile of wage distribution',
+                       '2nd quartile of wage distribution', '3rd quartile of wage distribution',
+                       'Highest quartile of wage distribution']]
+    X_3 = X_3.dropna()
+
+    # assign each correlation matrix as its own variable
+    correlation_matrix_1 = X.corr()
+    correlation_matrix_2 = X_2.corr()
+    correlation_matrix_3 = X_3.corr()
+
+    # output formatting
+    print("Variance Inflation Factors for X:")
+    print(correlation_matrix_1)
+    print("\nVariance Inflation Factors for X_2:")
+    print(correlation_matrix_2)
+    print("\nVariance Inflation Factors for X_3:")
+    print(correlation_matrix_3)
+
+    return correlation_matrix_1, correlation_matrix_2, correlation_matrix_3
+
+def vif_matrix() -> object:
+    """
+    Reads in dataset, and modifies columns in order to be used in variance inflation factor calculations.
+    Outputs VIF matrices for each X, X_2, X_3
+    """
+    data = pd.read_csv('finalData.csv')
+
+    # modifies data columns to be used as part of correlation matrix
+    data['3MonthInterestRate'] = pd.to_numeric(data['3MonthInterestRate'], errors='coerce')
+    data['FedMinWage'] = data['FedMinWage'].str.replace('$', '').astype(float)
+    data['GDP_AnnualGrowth'] = data['GDP_AnnualGrowth'].str.replace('%', '').astype(float) / 100
+
+    # choose the following variables for dataframe X
+    X = data[['3MonthInterestRate', 'MoM Change', 'Employment_Rate', 'FedMinWage', 'GDP_AnnualGrowth']]
+    X = X.dropna()
+
+    # choose the following variables for dataframe X_2
+    X_2 = data[['FedMinWage', 'MoM Change', '3MonthInterestRate', 'GDP_AnnualGrowth']]
+    X_2 = X_2.dropna()
+
+    # choose the following variables for dataframe X_3
+    X_3 = data[['3MonthInterestRate', 'MoM Change', 'Employment_Rate', 'FedMinWage',
+                       'GDP_AnnualGrowth', 'Lowest quartile of wage distribution',
+                       '2nd quartile of wage distribution', '3rd quartile of wage distribution',
+                       'Highest quartile of wage distribution']]
+    X_3 = X_3.dropna()
+
+    # creates a vif object where each element is its on vif value based on feature type
+    vif_1 = pd.DataFrame()
+    vif_1["Feature"] = X.columns
+    vif_1["VIF"] = [variance_inflation_factor(X.values, i) for i in range(len(X.columns))]
+
+    vif_2 = pd.DataFrame()
+    vif_2["Feature"] = X_2.columns
+    vif_2["VIF"] = [variance_inflation_factor(X_2.values, i) for i in range(len(X_2.columns))]
+
+    vif_3 = pd.DataFrame()
+    vif_3["Feature"] = X_3.columns
+    vif_3["VIF"] = [variance_inflation_factor(X_3.values, i) for i in range(len(X_3.columns))]
+
+    # output formatting
+    print("Variance Inflation Factors for X:")
+    print(vif_1)
+    print("\nVariance Inflation Factors for X_2:")
+    print(vif_2)
+    print("\nVariance Inflation Factors for X_3:")
+    print(vif_3)
+
+    return vif_1, vif_2, vif_3
 
 def main():
     """
@@ -374,6 +464,8 @@ def main():
     finalData = create_final_dataframe()
     OLS_1()
     OLS_2()
+    corr_matrix()
+    vif_matrix()
 
 if __name__ == '__main__':
     main()
