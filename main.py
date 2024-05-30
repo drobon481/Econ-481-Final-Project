@@ -271,13 +271,35 @@ def create_final_dataframe() -> pd.DataFrame:
     filtered_rates['Date'] = pd.to_datetime(filtered_rates['Date'])
 
     # Merge the two filtered DataFrames on the "Date" column
-    finalData = pd.merge(filtered_df, filtered_rates, on='Date')
+    merged_filtered_data = pd.merge(filtered_df, filtered_rates, on='Date')
 
     # Save the merged DataFrame to a new CSV file
-    finalData.to_csv('merged_filtered_data.csv', index=False)
+    merged_filtered_data.to_csv('merged_filtered_data.csv', index=False)
+
+    # Load initial merged and filtered data
+    finalData = pd.read_csv('merged_filtered_data.csv')
 
     # Drop any 'Unnamed' columns that might be there due to indexing
-    finalData = finalData.loc[:, ~finalData.columns.str.contains('^Unnamed')]
+    for i in range(13):
+        finalData = finalData.drop(columns=f"Unnamed: 0.{i}", errors='ignore')
+
+    # Read in the new CPI data and merge
+    newcpi = pd.read_csv('CPI_Month_Over_Month_Changes.csv')
+    finalData = finalData.merge(newcpi, how='right', on='Date')
+
+    # Read in the employment rate data and merge
+    emplyRate = pd.read_csv('Employment_Rate.csv')
+    finalData = finalData.merge(emplyRate, how='right', on='Date')
+
+    # Read in the minimum wage data and merge
+    minimumWage = pd.read_csv('mergedMinimumWageData.csv')
+    finalData = finalData.merge(minimumWage, how='left', on='Date')
+
+    # Save the final merged DataFrame to a new CSV file
+    finalData.to_csv('finalData.csv', index=False)
+
+    # Drop any 'Unnamed' columns that might be there due to indexing
+    # finalData = finalData.loc[:, ~finalData.columns.str.contains('^Unnamed')]
 
     return finalData
 
@@ -533,7 +555,7 @@ def plot_changes_by_groups(data: pd.DataFrame,
     viz_a.set_ylabel('Monthly % Change in Wage')
     viz_a.set(title='Monthly Percent Change in Wage, 1998 to 2024'\
                 '\nMale vs. Female')
-    fig_a.savefig('eda_viz_1a.png')
+    plt.savefig('eda_viz_1a.png')
 
     # Visualization B - Difference between income quartiles
     fig_b, ax_b = plt.subplots()
@@ -544,7 +566,7 @@ def plot_changes_by_groups(data: pd.DataFrame,
     viz_b.set_ylabel('Monthly % Change in Wage')
     viz_b.set(title='Monthly Percent Change in Wage, 1998 to 2024'\
                 '\nBy Income Quartile')
-    fig_b.savefig('eda_viz_1b.png')
+    plt.savefig('eda_viz_1b.png')
 
     # Visualization C - Difference between full-time and part-time
     fig_c, ax_c = plt.subplots()
@@ -554,7 +576,7 @@ def plot_changes_by_groups(data: pd.DataFrame,
     viz_c.set_ylabel('Monthly % Change in Wage')
     viz_c.set(title='Monthly Percent Change in Wage, 1998 to 2024'\
                 '\nEmployment Type')
-    fig_c.savefig('eda_viz_1c.png')
+    plt.savefig('eda_viz_1c.png')
 
     return fig_a, fig_b, fig_c
 
@@ -574,6 +596,7 @@ def plot_interest_employment_rates(data: pd.DataFrame,
     has_interest_rate = df2['Date'] > dt.datetime(1997, 12, 31)
     df2 = df2[has_interest_rate]
     df2 = df2.set_index('Date')
+    print(df2.columns)
 
     # Seaborn style options
     sns.set_style('darkgrid')
@@ -586,13 +609,14 @@ def plot_interest_employment_rates(data: pd.DataFrame,
     ax.set_ylabel('3-Month Interest Rate (%)')
     ax.set_xlabel('Month')
 
+    print(df2.columns)
     ax_2 = plt.twinx()
     fig = sns.lineplot(data=df2['Employment_Rate'], dashes=False, 
                        color='tab:orange', ax=ax_2, label='Employment Rate')
     ax_2.set_ylabel('Employment Rate (%)')
     ax_2.set(title='3-Month Interest Rate Compared to Employment Rate, '\
                 '1998 to 2024')
-    fig.savefig('eda_viz_2.png')
+    plt.savefig('eda_viz_2.png')
     
     # To show both labels in legend (but issue with overlap):
     # - Add label parameter to 3 month interest rate viz
@@ -645,7 +669,7 @@ def plot_changes_gdp_min_wage(data: pd.DataFrame,
     ax3.set(title='Annual Percent Change in GDP vs. Federal Minimum Wage, '\
                 '1978-2020')
     sns.move_legend(ax3, 'upper right')
-    fig3.savefig('eda_viz_3.png')
+    plt.savefig('eda_viz_3.png')
     
     return fig3
 
@@ -664,7 +688,7 @@ def main():
     OLS_2()
     corr_matrices_and_visuals()
     vif_matrix()
-    #plot_changes_by_groups(finalData)
+    plot_changes_by_groups(finalData)
     plot_interest_employment_rates(finalData)
     plot_changes_gdp_min_wage(finalData)
 
