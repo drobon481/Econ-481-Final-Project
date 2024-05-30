@@ -383,7 +383,7 @@ def corr_matrices_and_visuals() -> object:
     """
 
     # read in the dataset
-    data = pd.read_csv('C:\\Users\\danny\\481\\481\\Econ-481-Final-Project\\finalData.csv')
+    data = pd.read_csv('finalData.csv')
 
     # modifies data columns to be used as part of correlation matrix
     data['3MonthInterestRate'] = pd.to_numeric(data['3MonthInterestRate'], errors='coerce')
@@ -440,8 +440,6 @@ def corr_matrices_and_visuals() -> object:
     plt.savefig(map_3)
 
     return correlation_matrix_1, correlation_matrix_2, correlation_matrix_3, map_1, map_2, map_3
-
-print(corr_matrices_and_visuals())
 
 def vif_matrix() -> object:
     """
