@@ -53,7 +53,9 @@ def read_sheet(sheet) -> pd.DataFrame:
 
 def process_wage_growth() -> pd.DataFrame:
     """
-    
+    Reads in url from Fed. Reserve in Atlanta, creates a dataframe
+    based off selected sheets, and saves the sheets chosen as
+    a new csv. Returns the pandas Dataframe object of the .csv.
     """
     # Download and save the Excel file
     url = 'https://www.atlantafed.org/-/media/documents/datafiles/chcs/'\
@@ -78,7 +80,8 @@ def process_wage_growth() -> pd.DataFrame:
 
 def process_employment_rate() -> pd.DataFrame:
     """
-    
+    Reads in url from Fed. Reserve St. Louis, renames columns for clarity,
+    and saves the columns as a csv file. Returns the pandas Dataframe object of the csv.
     """
     url = 'https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23e1e9f0'\
         '&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff'\
@@ -101,7 +104,11 @@ def process_employment_rate() -> pd.DataFrame:
 
 def process_minimum_wage() -> pd.DataFrame:
     """
-    
+    Reads in MinWage_PartyControl.csv and MinimumWage.csv and creates new
+    merged_df that combines important columns selected. Creates dates dataframe
+    and merges to filtered_df to create a dates column by month. Assigns dates
+    column as the first column, and creates a year column for later reference.
+    Saves filtered_df as a csv file. Returns the pandas Dataframe object of the .csv.
     """
     # Load data
     minimumWage_Party = pd.read_csv('MinWage_PartyControl.csv').iloc[:, :6]
@@ -137,7 +144,9 @@ def process_minimum_wage() -> pd.DataFrame:
 
 def process_interest_rate() -> pd.DataFrame:
     """
-    
+    Reads in url from Fed. Reserve of St. Louis and reads it in, selecting
+    the column 3MonthInterestRate to be created as a new csv. Returns the 
+    pandas Dataframe object of the .csv.
     """
     url = 'https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23e1e9f0'\
         '&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&'\
@@ -159,7 +168,14 @@ def process_interest_rate() -> pd.DataFrame:
 
 def process_cpi() -> pd.DataFrame:
     """
-    
+    Reads in cpi.csv from usinflationcalculator.com, which uses the CPI calculator function
+    from the US Department of Labor. Cleans and drops unncessary dates to keep in line with date
+    ranges in dataset. Pivots wide by utilizing melt function from pandas, and maps each month as
+    its own row. Unmelts the pivoted dataframe, filters dates to only include those relevant to the
+    dataset, and saves the pivoted dataframe as new_cpi.csv. Then normalizes CPI to be month over 
+    month, as this is in line with the observations in the dataset being wage change by month. The 
+    newly created column is then saved as CPI_Month_Over_Month_Changes.csv. Returns the pandas
+    Dataframe object as a .csv.
     """
     # read in cpi csv
     cpi = pd.read_csv('cpi.csv')
@@ -209,7 +225,11 @@ def process_cpi() -> pd.DataFrame:
 
 def create_final_dataframe() -> pd.DataFrame:
     """
-    
+    Reads in previously created .csvs and filters by desirable dates. 
+    The .csvs are checked for its datetime datatypes, and is merged into the
+    finalData dataframe, which is then saved for redundancy. Drops unnecessary columns, 
+    merges with previously created .csvs and is saved as a .csv. Returns a pandas
+    Dataframe object of the .csv.
     """
     # Load and filter the large DataFrame
     merged_df = pd.read_csv('wageGrowth.csv', parse_dates=[0])
@@ -259,7 +279,7 @@ def OLS_1() -> object:
     Regressing Overall.12 (overall % change in wage growth, monthly, for the whole dataset) 
     over 3MonthInterestRate, MoM Change, FedMinWage, and GDP_AnnualGrowth
     Reads in our final dataset and cleans/our data in order to run OLS.
-    Utilizes statsmodel OLS function which runs OLS and outputs model summary
+    Utilizes statsmodel OLS function which runs OLS and returns model summary.
     """
     data = pd.read_csv('finalData.csv')
 
@@ -281,7 +301,7 @@ def OLS_1() -> object:
     # Correctly remove percent signs from 'GDP_AnnualGrowth', convert to float, and adjust for percentage representation
     data['GDP_AnnualGrowth'] = data['GDP_AnnualGrowth'].str.replace('%', '').astype(float) / 100
 
-
+    # assign dummy variables for democrat (0) and republican (1)
     def map_party(party):
         if party == 'Democrat':
             return 0
@@ -311,16 +331,14 @@ def OLS_1() -> object:
     # Print the summary of the regression results
     sum_OLS = ols_model.summary()
     
-
     return sum_OLS
 
 def OLS_2() -> object:
 
     """
-    Regressed additional variables like Male, Female, Bachelors degree or higher on 
-    Overall.12.
-    Reads in our final dataset and cleans/our data in order to run OLS.
-    Utilizes statsmodel OLS function which runs OLS and outputs model summary
+    Regressed additional variables like Male, Female, Bachelors degree or higher, and
+    others on Overall.12. Reads in our final dataset and cleans/our data in order to run OLS.
+    Utilizes statsmodel OLS function which runs OLS and returns model summary.
     """
     data = pd.read_csv('finalData.csv')
 
@@ -357,14 +375,15 @@ def OLS_2() -> object:
     sum_OLS_2 = est.summary()
     return sum_OLS_2
 
-def corr_matrix() -> object:
+def corr_matrices_and_visuals() -> object:
     """
     Chooses variables from final dataset and drops nas for use in correlation matrices.
-    Utilizes .corr() function from pandas library 
+    Utilizes .corr() function from pandas library. Utilizes heatmap function from seaborn
+    and returns correlation heatmaps with different palettes alongside correlation matrices.
     """
 
     # read in the dataset
-    data = pd.read_csv('finalData.csv')
+    data = pd.read_csv('C:\\Users\\danny\\481\\481\\Econ-481-Final-Project\\finalData.csv')
 
     # modifies data columns to be used as part of correlation matrix
     data['3MonthInterestRate'] = pd.to_numeric(data['3MonthInterestRate'], errors='coerce')
@@ -398,14 +417,38 @@ def corr_matrix() -> object:
     print(correlation_matrix_2)
     print("\nVariance Inflation Factors for X_3:")
     print(correlation_matrix_3)
+    
+    # plot and visualize heatmaps
+    plt.figure(figsize=(10, 8))
+    map_1 = sns.heatmap(correlation_matrix_1, annot=True, cmap=sns.diverging_palette(50, 500, n = 500), vmin=-1, vmax=1)
+    plt.title('Correlation Matrix Heatmap')
+    plt.show()
 
-    return correlation_matrix_1, correlation_matrix_2, correlation_matrix_3
+    plt.figure(figsize=(10, 8))
+    map_2= sns.heatmap(correlation_matrix_2, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.title('Correlation Matrix Heatmap')
+    plt.show()
+
+    plt.figure(figsize=(10, 8))
+    map_3 = sns.heatmap(correlation_matrix_3, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.title('Correlation Matrix Heatmap')
+    plt.show()
+
+    # save each heat map as apng
+    plt.savefig(map_1)
+    plt.savefig(map_2) 
+    plt.savefig(map_3)
+
+    return correlation_matrix_1, correlation_matrix_2, correlation_matrix_3, map_1, map_2, map_3
+
+print(corr_matrices_and_visuals())
 
 def vif_matrix() -> object:
     """
-    Reads in dataset, and modifies columns in order to be used in variance inflation factor calculations.
-    Outputs VIF matrices for each X, X_2, X_3
+    Reads in dataset, and drops nas for each variable in order to be used in variance 
+    inflation factor calculations. Returns  VIF matrices for each X, X_2, X_3
     """
+    # reads in data
     data = pd.read_csv('finalData.csv')
 
     # modifies data columns to be used as part of correlation matrix
@@ -464,7 +507,7 @@ def main():
     finalData = create_final_dataframe()
     OLS_1()
     OLS_2()
-    corr_matrix()
+    corr_matrices_and_visuals()
     vif_matrix()
 
 if __name__ == '__main__':
