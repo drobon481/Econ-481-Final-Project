@@ -24,7 +24,27 @@ https://www.atlantafed.org/chcs/wage-growth-tracker
 - Contains columns for overall change as well as how wages changed for 
   different worker demographics
 
-Federal Reserve Bank of St. Louis - 
+Federal Reserve Bank of St. Louis - Employment Rate
+https://fred.stlouisfed.org/series/LREM64TTUSM156S
+- Gives % employment rate total for individuals 15-64 in US
+- Contains employment rate % and date columns
+
+US Minimum Wage (1930 - 2020)
+https://www.kaggle.com/datasets/brandonconrady/us-minimum-wage-1938-2020
+- Gives party designation for Senate, House, and President by year
+- Also gives federal minimum wage, with each variable as its own column
+
+Federal Reserve Bank of St. Louis - 3 Month Interest Rate
+https://fred.stlouisfed.org/series/IR3TIB01USM156N
+- Gives us 3 month interest rates and yields amongst banks
+- Gives two columns: date and yield rate 
+
+CPI 
+https://www.usinflationcalculator.com/inflation/
+consumer-price-index-and-annual-percent-changes-from-1913-to-2008/
+- Uses the CPI calculator function from the US Department of Labor for each observation
+- Used 'Get Data' in Excel to obtain table
+- Each value is based off the base year 1982-1984
 
 """
 
@@ -168,8 +188,8 @@ def process_interest_rate() -> pd.DataFrame:
 
 def process_cpi() -> pd.DataFrame:
     """
-    Reads in cpi.csv from usinflationcalculator.com, which uses the CPI calculator function
-    from the US Department of Labor. Cleans and drops unncessary dates to keep in line with date
+    Reads in cpi.csv, which uses the CPI calculator function
+    from the US Department of Labor. Cleans and drops unnecessary dates to keep in line with date
     ranges in dataset. Pivots wide by utilizing melt function from pandas, and maps each month as
     its own row. Unmelts the pivoted dataframe, filters dates to only include those relevant to the
     dataset, and saves the pivoted dataframe as new_cpi.csv. Then normalizes CPI to be month over 
@@ -214,6 +234,10 @@ def process_cpi() -> pd.DataFrame:
     # Normalize CPI data above to be month over month, then creating a new 
     # dataframe with only date and month over month calculations.
 
+    # 
+    new_cpi['CPI'] = pd.to_numeric(new_cpi['CPI'], errors='coerce')
+    new_cpi = new_cpi.dropna(subset=['CPI'])
+    
     # Calculate the month-over-month percentage change
     new_cpi['MoM Change'] = new_cpi['CPI'].pct_change() * 100
     selected_columns = new_cpi.reset_index()[['Date', 'MoM Change']]
@@ -240,8 +264,7 @@ def create_final_dataframe() -> pd.DataFrame:
     # Load and filter the 3-month interest rates DataFrame
     rates = pd.read_csv('3-Month Interest Rates', parse_dates=[0])
     filtered_rates = rates[rates.iloc[:, 0] > '1997-12-01']
-    filtered_rates.columns = ['Date'] \
-        + list(filtered_rates.columns[1:])  # Rename the first column
+    filtered_rates.columns = ['Date'] + list(filtered_rates.columns[1:])  # Rename the first column
 
     # Ensure that both 'Date' columns are in the datetime64[ns] format
     filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
@@ -254,23 +277,7 @@ def create_final_dataframe() -> pd.DataFrame:
     finalData.to_csv('merged_filtered_data.csv', index=False)
 
     # Drop any 'Unnamed' columns that might be there due to indexing
-    for i in range(13):
-        finalData = finalData.drop(columns=f"Unnamed: 0.{i}", errors='ignore')
-
-    # Read in the new CPI data and merge
-    newcpi = pd.read_csv('CPI_Month_Over_Month_Changes.csv')
-    finalData = finalData.merge(newcpi, how='right', on='Date')
-
-    # Read in the employment rate data and merge
-    emplyRate = pd.read_csv('Employment_Rate.csv')
-    finalData = finalData.merge(emplyRate, how='right', on='Date')
-
-    # Read in the minimum wage data and merge
-    minimumWage = pd.read_csv('mergedMinimumWageData.csv')
-    finalData = finalData.merge(minimumWage, how='left', on='Date')
-
-    # Save the final merged DataFrame to a new CSV file
-    finalData.to_csv('finalData.csv', index=False)
+    finalData = finalData.loc[:, ~finalData.columns.str.contains('^Unnamed')]
 
     return finalData
 
