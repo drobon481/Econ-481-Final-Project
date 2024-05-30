@@ -418,26 +418,24 @@ def corr_matrices_and_visuals() -> object:
     print("\nVariance Inflation Factors for X_3:")
     print(correlation_matrix_3)
     
-    # plot and visualize heatmaps
+    # plot, visualize, and save each heatmap as a png
     plt.figure(figsize=(10, 8))
     map_1 = sns.heatmap(correlation_matrix_1, annot=True, cmap=sns.diverging_palette(50, 500, n = 500), vmin=-1, vmax=1)
     plt.title('Correlation Matrix Heatmap')
+    plt.savefig('correlation_matrix_X.png')
     plt.show()
 
     plt.figure(figsize=(10, 8))
     map_2= sns.heatmap(correlation_matrix_2, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title('Correlation Matrix Heatmap')
+    plt.savefig('correlation_matrix_X2.png')
     plt.show()
 
     plt.figure(figsize=(10, 8))
     map_3 = sns.heatmap(correlation_matrix_3, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title('Correlation Matrix Heatmap')
+    plt.savefig('correlation_matrix_X3.png')
     plt.show()
-
-    # save each heat map as apng
-    plt.savefig(map_1)
-    plt.savefig(map_2) 
-    plt.savefig(map_3)
 
     return correlation_matrix_1, correlation_matrix_2, correlation_matrix_3, map_1, map_2, map_3
 
